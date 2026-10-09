@@ -3,12 +3,19 @@
     <color name="control_button_color">#4CC4C4C4</color>
     <color name="control_button_pressed_color">#4D000000</color>
 
-    <color name="minebutton_color">#9649b8</color>
-    <color name="background_app">#181818</color>
+    <!-- Nev Launcher red theme -->
+    <color name="nev_red">#E53935</color>
+    <color name="nev_red_dark">#B71C1C</color>
+    <color name="nev_red_pressed">#7F1212</color>
+    <color name="nev_yellow">#FFC107</color>
+    <color name="nev_ripple">#33E53935</color>
+
+    <color name="minebutton_color">@color/nev_red</color>
+    <color name="background_app">#120808</color>
     <color name="divider">@color/background_overlay</color>
-    <color name="background_overlay">#464646</color>
-    <color name="background_status_bar">#242424</color>
-    <color name="background_bottom_bar">#232323</color>
+    <color name="background_overlay">#4A2323</color>
+    <color name="background_status_bar">#1E0B0B</color>
+    <color name="background_bottom_bar">#190909</color>
 
     <color name="primary_text">#FFFFFF</color>
     <color name="secondary_text">#B2B2B2</color>

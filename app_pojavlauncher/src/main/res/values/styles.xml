@@ -9,6 +9,14 @@
         <item name="android:navigationBarColor">@color/background_app</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
 
+        <!-- Nev Launcher red theme -->
+        <item name="colorPrimary">@color/nev_red</item>
+        <item name="colorPrimaryDark">@color/nev_red_dark</item>
+        <item name="colorAccent">@color/nev_red</item>
+        <item name="colorControlActivated">@color/nev_red</item>
+        <item name="colorControlHighlight">@color/nev_ripple</item>
+        <item name="colorButtonNormal">@color/nev_red_dark</item>
+
         <item name="android:textSize">@dimen/_12ssp</item>
 
     </style>
