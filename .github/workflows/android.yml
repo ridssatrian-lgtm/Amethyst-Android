@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     env:
       CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
     steps:
@@ -53,3 +55,15 @@ jobs:
         with:
           name: app-debug
           path: out/app-debug.apk
+
+      - name: Publish release (v3_openjdk only)
+        if: github.ref == 'refs/heads/v3_openjdk'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp out/app-debug.apk NevLauncher.apk
+          gh release delete latest-debug --yes --cleanup-tag || true
+          gh release create latest-debug NevLauncher.apk \
+            --title "Nev Launcher (debug build)" \
+            --notes "Build otomatis dari commit ${GITHUB_SHA::7}" \
+            --prerelease --target "$GITHUB_SHA"
