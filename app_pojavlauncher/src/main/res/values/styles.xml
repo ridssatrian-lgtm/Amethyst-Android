@@ -28,7 +28,7 @@
     </style>
 
     <style name="LauncherMenuButton" parent="Widget.AppCompat.Button">
-        <item name="android:background">?android:attr/selectableItemBackground</item>
+        <item name="android:background">@drawable/nev_menu_button_background</item>
     </style>
 
     <style name="LauncherMenuButton.Universal" parent="LauncherMenuButton">

@@ -24,13 +24,26 @@
 				android:layout_height="0dp"
 				android:orientation="vertical"
 				app:layout_constraintGuide_percent="0.5"/>
+
+			<ImageView
+				android:id="@+id/nev_logo"
+				android:layout_width="0dp"
+				android:layout_height="@dimen/_72sdp"
+				android:layout_marginTop="@dimen/_8sdp"
+				android:adjustViewBounds="true"
+				android:contentDescription="@string/app_name"
+				android:scaleType="fitCenter"
+				android:src="@drawable/nev_logo"
+				app:layout_constraintEnd_toEndOf="parent"
+				app:layout_constraintStart_toStartOf="parent"
+				app:layout_constraintTop_toTopOf="parent" />
 			<com.kdt.mcgui.LauncherMenuButton
 				android:id="@+id/news_button"
 				style="@style/LauncherMenuButton.Universal"
 				android:layout_width="0dp"
 				android:text="@string/mcl_tab_wiki"
 				android:drawableStart="@drawable/ic_menu_news"
-				app:layout_constraintTop_toTopOf="parent"
+				app:layout_constraintTop_toBottomOf="@id/nev_logo"
 				app:layout_constraintStart_toStartOf="parent"
 				app:layout_constraintEnd_toStartOf="@id/social_divider" />
 			<View
@@ -47,7 +60,7 @@
 				android:layout_width="0dp"
 				android:text="@string/mcl_button_discord"
 				android:drawableStart="@drawable/ic_discord"
-				app:layout_constraintTop_toTopOf="parent"
+				app:layout_constraintTop_toBottomOf="@id/nev_logo"
 				app:layout_constraintStart_toEndOf="@id/social_divider"
 				app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -119,7 +132,7 @@
 		android:id="@+id/_background_display_view"
 		android:layout_width="match_parent"
 		android:layout_height="0dp"
-		android:background="@color/background_bottom_bar"
+		android:background="@drawable/nev_bottom_bar_background"
 		android:translationZ="-1dp"
 
 		app:layout_constraintBottom_toBottomOf="parent"
