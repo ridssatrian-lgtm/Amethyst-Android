@@ -20,6 +20,8 @@ import androidx.preference.SeekBarPreference;
 
 import net.kdt.pojavlaunch.R;
 
+import java.util.Locale;
+
 public class CustomSeekBarPreference extends SeekBarPreference {
 
     /** The suffix displayed */
@@ -30,7 +32,6 @@ public class CustomSeekBarPreference extends SeekBarPreference {
     private TextView mTextView;
     /** Seekbar increment in case the max gets set */
     private final int mIncrement;
-
 
     @SuppressLint("PrivateResource")
     public CustomSeekBarPreference(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
@@ -56,31 +57,30 @@ public class CustomSeekBarPreference extends SeekBarPreference {
 
     @Override
     public void setMin(int min) {
-        //Note: since the max (setMax is a final function) is not taken into account properly, setting the min over the max may produce funky results
+        // Note: setMin above the max may produce unexpected results.
         super.setMin(min);
         if (min != mMin) mMin = min;
     }
-
 
     @Override
     public void onBindViewHolder(@NonNull PreferenceViewHolder view) {
         super.onBindViewHolder(view);
         TextView titleTextView = (TextView) view.findViewById(android.R.id.title);
-        titleTextView.setTextColor(Color.WHITE);
+        if (titleTextView != null) titleTextView.setTextColor(Color.WHITE);
 
         mTextView = (TextView) view.findViewById(R.id.seekbar_value);
-        mTextView.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
         SeekBar seekBar = (SeekBar) view.findViewById(R.id.seekbar);
+        if (mTextView == null || seekBar == null) return;
+
+        mTextView.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 progress += mMin;
-                progress = progress / getSeekBarIncrement();
-                progress = progress * getSeekBarIncrement();
+                int increment = Math.max(1, getSeekBarIncrement());
+                progress = (progress / increment) * increment;
                 progress -= mMin;
-
                 mTextView.setText(String.valueOf(progress + mMin));
                 updateTextViewWithSuffix();
             }
@@ -90,25 +90,21 @@ public class CustomSeekBarPreference extends SeekBarPreference {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-
                 int progress = seekBar.getProgress() + mMin;
-                progress /= getSeekBarIncrement();
-                progress *= getSeekBarIncrement();
-                progress -= mMin;
-
-                setValue(progress + mMin);
+                int increment = Math.max(1, getSeekBarIncrement());
+                progress = (progress / increment) * increment;
+                setValue(progress);
                 updateTextViewWithSuffix();
             }
         });
 
-        // Tapping the value lets the user type the number directly instead of using the slider
+        // Tap the value to enter an exact number in a dialog.
         mTextView.setPaintFlags(mTextView.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
         mTextView.setOnClickListener(v -> showValueInputDialog());
-
         updateTextViewWithSuffix();
     }
 
-    /** Shows a dialog to type the value as a number, validated against the min/max range */
+    /** Shows a numeric input dialog validated against the preference's min/max range. */
     private void showValueInputDialog() {
         final Context context = getContext();
         final int min = getMin();
@@ -132,7 +128,6 @@ public class CustomSeekBarPreference extends SeekBarPreference {
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
 
-        // Set the click listener after show() so an invalid value does not dismiss the dialog
         dialog.setOnShowListener(d ->
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                     int value;
@@ -147,30 +142,21 @@ public class CustomSeekBarPreference extends SeekBarPreference {
                         return;
                     }
 
-                    // Same rounding as the slider so the value respects the increment
                     int increment = Math.max(1, getSeekBarIncrement());
                     value = ((value - min) / increment) * increment + min;
-
                     setValue(value);
                     dialog.dismiss();
                 }));
         dialog.show();
     }
 
-    /**
-     * Set a suffix to be appended on the TextView associated to the value
-     * @param suffix The suffix to append as a String
-     */
+    /** Set a suffix appended to the formatted value. */
     public void setSuffix(String suffix) {
         this.mSuffix = suffix;
     }
 
-    /**
-     * Convenience function to set both min and max at the same time.
-     * @param min The minimum value
-     * @param max The maximum value
-     */
-    public void setRange(int min, int max){
+    /** Set the minimum and maximum together. */
+    public void setRange(int min, int max) {
         setMin(min);
         setMaxKeepIncrement(max);
     }
@@ -180,10 +166,17 @@ public class CustomSeekBarPreference extends SeekBarPreference {
         setSeekBarIncrement(mIncrement);
     }
 
-
-    private void updateTextViewWithSuffix(){
-        if(!mTextView.getText().toString().endsWith(mSuffix)){
-            mTextView.setText(String.format("%s%s", mTextView.getText(), mSuffix));
+    private void updateTextViewWithSuffix() {
+        if (mTextView == null) return;
+        String raw = mTextView.getText().toString().replaceFirst("[^0-9].*$", "").trim();
+        if (raw.isEmpty()) return;
+        try {
+            int value = Integer.parseInt(raw);
+            String gigabytes = String.format(Locale.getDefault(), "%.1f", value / 1024.0);
+            mTextView.setText(String.format(Locale.getDefault(), "%d MB ( %s GB )%s",
+                    value, gigabytes, mSuffix));
+        } catch (NumberFormatException ignored) {
+            // Keep the existing text if it is not a valid numeric value.
         }
     }
 }
