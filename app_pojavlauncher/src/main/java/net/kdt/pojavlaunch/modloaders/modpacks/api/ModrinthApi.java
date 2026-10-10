@@ -53,7 +53,7 @@ public class ModrinthApi implements ModpackApi{
         HashMap<String, Object> params = new HashMap<>();
         StringBuilder facetString = new StringBuilder();
         facetString.append("[");
-        facetString.append(String.format("[\"project_type:%s\"]", searchFilters.isModpack ? "modpack" : "mod"));
+        facetString.append(String.format("[\"project_type:%s\"]", getProjectType(searchFilters.contentType)));
         if(searchFilters.mcVersion != null && !searchFilters.mcVersion.isEmpty())
             facetString.append(String.format(",[\"versions:%s\"]", searchFilters.mcVersion));
         facetString.append("]");
@@ -74,11 +74,11 @@ public class ModrinthApi implements ModpackApi{
             JsonObject hit = responseHits.get(i).getAsJsonObject();
             items[i] = new ModItem(
                     Constants.SOURCE_MODRINTH,
-                    hit.get("project_type").getAsString().equals("modpack"),
+                    searchFilters.contentType,
                     hit.get("project_id").getAsString(),
                     hit.get("title").getAsString(),
                     hit.get("description").getAsString(),
-                    hit.get("icon_url").getAsString()
+                    GsonJsonUtils.getStringSafe(hit, "icon_url")
             );
         }
         if(modrinthSearchResult == null) modrinthSearchResult = new ModrinthSearchResult();
@@ -99,6 +99,8 @@ public class ModrinthApi implements ModpackApi{
         String[] mcNames = new String[response.size()];
         String[] urls = new String[response.size()];
         String[] hashes = new String[response.size()];
+        String[] fileNames = new String[response.size()];
+        String[] loaders = new String[response.size()];
         ModDetail.Dependencies[][] dependencies = new ModDetail.Dependencies[response.size()][];
 
         for (int i=0; i<response.size(); ++i) {
@@ -120,10 +122,22 @@ public class ModrinthApi implements ModpackApi{
             } catch (Exception ignored) {}
 
             mcNames[i] = version.get("game_versions").getAsJsonArray().get(0).getAsString();
-            urls[i] = version.get("files").getAsJsonArray().get(0).getAsJsonObject().get("url").getAsString();
+            loaders[i] = joinJsonStrings(version.getAsJsonArray("loaders"));
+            // Prefer the file marked as primary, otherwise use the first one
+            JsonArray files = version.getAsJsonArray("files");
+            JsonObject file = files.get(0).getAsJsonObject();
+            for (int f = 0; f < files.size(); ++f) {
+                JsonObject candidate = files.get(f).getAsJsonObject();
+                JsonElement primary = candidate.get("primary");
+                if (primary != null && !primary.isJsonNull() && primary.getAsBoolean()) {
+                    file = candidate;
+                    break;
+                }
+            }
+            urls[i] = file.get("url").getAsString();
+            fileNames[i] = GsonJsonUtils.getStringSafe(file, "filename");
             // Assume there may not be hashes, in case the API changes
-            JsonObject hashesMap = version.getAsJsonArray("files").get(0).getAsJsonObject()
-                    .get("hashes").getAsJsonObject();
+            JsonObject hashesMap = file.getAsJsonObject("hashes");
             if(hashesMap == null || hashesMap.get("sha1") == null){
                 hashes[i] = null;
                 continue;
@@ -132,7 +146,33 @@ public class ModrinthApi implements ModpackApi{
             hashes[i] = hashesMap.get("sha1").getAsString();
         }
 
-        return new ModDetail(item, names, ids, mcNames, urls, hashes, dependencies);
+        ModDetail modDetail = new ModDetail(item, names, ids, mcNames, urls, hashes, dependencies);
+        modDetail.versionFileNames = fileNames;
+        modDetail.versionLoaders = loaders;
+        return modDetail;
+    }
+
+    private static String getProjectType(int contentType) {
+        switch (contentType) {
+            case Constants.CONTENT_MOD:
+                return "mod";
+            case Constants.CONTENT_SHADER:
+                return "shader";
+            case Constants.CONTENT_RESOURCEPACK:
+                return "resourcepack";
+            default:
+                return "modpack";
+        }
+    }
+
+    private static String joinJsonStrings(JsonArray array) {
+        if (array == null || array.size() == 0) return null;
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < array.size(); ++i) {
+            if (i != 0) builder.append(", ");
+            builder.append(array.get(i).getAsString());
+        }
+        return builder.toString();
     }
 
     private void fillInMissingModItemData(ModItem item) {
@@ -155,7 +195,7 @@ public class ModrinthApi implements ModpackApi{
 
     @Override
     public ModLoader installMod(ModDetail modDetail, int selectedVersion) throws IOException{
-        //TODO considering only modpacks for now
+        // Only modpacks reach this point, single-file content is handled by ContentInstaller
         return ModpackInstaller.installModpack(modDetail, selectedVersion, this::installMrpack);
     }
 

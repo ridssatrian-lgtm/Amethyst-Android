@@ -58,6 +58,11 @@ public interface ModpackApi {
         // which may lead to two concurrent installations (very bad)
         ProgressLayout.setProgress(ProgressLayout.INSTALL_MODPACK, 0, R.string.global_waiting);
         PojavApplication.sExecutorService.execute(() -> {
+            // Mods, shaders and resource packs are single files that go into the current profile
+            if (modDetail.contentType != Constants.CONTENT_MODPACK) {
+                ContentInstaller.install(context, modDetail, selectedVersion);
+                return;
+            }
             try {
                 ModLoader loaderInfo = installMod(modDetail, selectedVersion);
                 if (loaderInfo == null) return;

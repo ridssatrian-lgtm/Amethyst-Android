@@ -271,7 +271,7 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             if(detailedItem != null) {
                 setInstallEnabled(true);
                 mExtendedErrorTextView.setVisibility(View.GONE);
-                mVersionAdapter.setObjects(Arrays.asList(detailedItem.versionNames));
+                mVersionAdapter.setObjects(Arrays.asList(getVersionLabels(detailedItem)));
                 mExtendedSpinner.setAdapter(mVersionAdapter);
             } else {
                 closeDetailedView();
@@ -280,6 +280,18 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 mExtendedSpinner.setAdapter(null);
                 mVersionAdapter.setObjects(null);
             }
+        }
+
+        /** Mods need to show which loaders a file is for, otherwise Fabric and Forge files look the same */
+        private String[] getVersionLabels(ModDetail detail) {
+            String[] names = detail.versionNames;
+            if(detail.contentType != Constants.CONTENT_MOD || detail.versionLoaders == null) return names;
+            String[] labels = new String[names.length];
+            for(int i = 0; i < names.length; i++) {
+                String loaders = i < detail.versionLoaders.length ? detail.versionLoaders[i] : null;
+                labels[i] = loaders == null ? names[i] : names[i] + " [" + loaders + "]";
+            }
+            return labels;
         }
 
         private void openDetailedView() {

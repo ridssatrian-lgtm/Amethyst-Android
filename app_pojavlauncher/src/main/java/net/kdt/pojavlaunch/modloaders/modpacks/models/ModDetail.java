@@ -14,8 +14,12 @@ public class ModDetail extends ModItem {
     public String[] versionHashes;
     public String[] versionIds;
     public Dependencies[][] dependencies;
+    /* File names of the downloadable files, used for single-file content (mods, shaders, resource packs). May contain nulls. */
+    public String[] versionFileNames;
+    /* Mod loaders each version supports (e.g. "fabric, quilt"), shown for mods. May be null or contain nulls. */
+    public String[] versionLoaders;
     public ModDetail(ModItem item, String[] versionNames, String[] versionIds, String[] mcVersionNames, String[] versionUrls, String[] hashes, Dependencies[][] dependencies) {
-        super(item.apiSource, item.isModpack, item.id, item.title, item.description, item.imageUrl);
+        super(item.apiSource, item.contentType, item.id, item.title, item.description, item.imageUrl);
         this.versionNames = versionNames;
         this.mcVersionNames = mcVersionNames;
         this.versionIds = versionIds;
@@ -25,7 +29,7 @@ public class ModDetail extends ModItem {
 
         // Add the mc version to the version model
         for (int i=0; i<versionNames.length; i++){
-            if (!versionNames[i].contains(mcVersionNames[i]))
+            if (mcVersionNames[i] != null && !versionNames[i].contains(mcVersionNames[i]))
                 versionNames[i] += " - " + mcVersionNames[i];
         }
     }
@@ -43,7 +47,7 @@ public class ModDetail extends ModItem {
                 ", description='" + description + '\'' +
                 ", imageUrl='" + imageUrl + '\'' +
                 ", apiSource=" + apiSource +
-                ", isModpack=" + isModpack +
+                ", contentType=" + contentType +
                 '}';
     }
     public static class Dependencies{

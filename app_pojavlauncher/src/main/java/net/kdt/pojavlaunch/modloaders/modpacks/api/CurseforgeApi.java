@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
 
@@ -42,6 +43,9 @@ public class CurseforgeApi implements ModpackApi{
     private static final int CURSEFORGE_MODPACK_CLASS_ID = 4471;
     // https://api.curseforge.com/v1/categories?gameId=432 and search for "Mods" (case-sensitive)
     private static final int CURSEFORGE_MOD_CLASS_ID = 6;
+    // "Texture Packs" in the CurseForge UI (called resource packs in-game)
+    private static final int CURSEFORGE_RESOURCEPACK_CLASS_ID = 12;
+    private static final int CURSEFORGE_SHADER_CLASS_ID = 6552;
     private static final int CURSEFORGE_SORT_RELEVANCY = 1;
     private static final int CURSEFORGE_PAGINATION_SIZE = 50;
     private static final int CURSEFORGE_PAGINATION_END_REACHED = -1;
@@ -58,7 +62,7 @@ public class CurseforgeApi implements ModpackApi{
 
         HashMap<String, Object> params = new HashMap<>();
         params.put("gameId", CURSEFORGE_MINECRAFT_GAME_ID);
-        params.put("classId", searchFilters.isModpack ? CURSEFORGE_MODPACK_CLASS_ID : CURSEFORGE_MOD_CLASS_ID);
+        params.put("classId", getClassId(searchFilters.contentType));
         params.put("searchFilter", searchFilters.name);
         params.put("sortField", CURSEFORGE_SORT_RELEVANCY);
         params.put("sortOrder", "desc");
@@ -82,12 +86,14 @@ public class CurseforgeApi implements ModpackApi{
                 Log.i("CurseforgeApi", "Skipping modpack "+dataElement.get("name").getAsString() + " because curseforge sucks");
                 continue;
             }
+            JsonObject logo = dataElement.has("logo") && dataElement.get("logo").isJsonObject() ?
+                    dataElement.getAsJsonObject("logo") : null;
             ModItem modItem = new ModItem(Constants.SOURCE_CURSEFORGE,
-                    searchFilters.isModpack,
+                    searchFilters.contentType,
                     dataElement.get("id").getAsString(),
                     dataElement.get("name").getAsString(),
                     dataElement.get("summary").getAsString(),
-                    dataElement.getAsJsonObject("logo").get("thumbnailUrl").getAsString());
+                    logo != null ? GsonJsonUtils.getStringSafe(logo, "thumbnailUrl") : null);
             modItemList.add(modItem);
         }
         if(curseforgeSearchResult == null) curseforgeSearchResult = new CurseforgeSearchResult();
@@ -114,13 +120,25 @@ public class CurseforgeApi implements ModpackApi{
         String[] mcVersionNames = new String[length];
         String[] versionUrls = new String[length];
         String[] hashes = new String[length];
+        String[] fileNames = new String[length];
+        String[] loaders = new String[length];
         ModDetail.Dependencies[][] dependencies = new ModDetail.Dependencies[length][];
         for(int i = 0; i < allModDetails.size(); i++) {
             JsonObject modDetail = allModDetails.get(i);
             versionNames[i] = modDetail.get("displayName").getAsString();
             versionIds[i] = modDetail.get("id").getAsString();
-            JsonElement downloadUrl = modDetail.get("downloadUrl");
-            versionUrls[i] = downloadUrl.getAsString();
+            fileNames[i] = GsonJsonUtils.getStringSafe(modDetail, "fileName");
+            // The URL is null when the author disallowed third-party distribution. In that case
+            // try the edge link that the rest of this class falls back to as well.
+            String downloadUrl = GsonJsonUtils.getStringSafe(modDetail, "downloadUrl");
+            if(downloadUrl == null && fileNames[i] != null) {
+                int fileId = GsonJsonUtils.getIntSafe(modDetail, "id", -1);
+                if(fileId != -1) {
+                    downloadUrl = String.format(Locale.ROOT, "https://edge.forgecdn.net/files/%s/%s/%s",
+                            fileId / 1000, fileId % 1000, fileNames[i]);
+                }
+            }
+            versionUrls[i] = downloadUrl;
 
             JsonArray gameVersions = modDetail.getAsJsonArray("gameVersions");
             try {
@@ -136,18 +154,41 @@ public class CurseforgeApi implements ModpackApi{
                     );
                 }
             } catch (Exception ignored) {}
+            StringBuilder loaderNames = new StringBuilder();
             for(JsonElement jsonElement : gameVersions) {
                 String gameVersion = jsonElement.getAsString();
                 if(!sMcVersionPattern.matcher(gameVersion).matches()) {
+                    // Everything that is not a version number is a mod loader (Forge, Fabric...) or an environment (Client, Server)
+                    if(!gameVersion.equalsIgnoreCase("client") && !gameVersion.equalsIgnoreCase("server")
+                            && !gameVersion.equalsIgnoreCase("java 8") && !gameVersion.toLowerCase(Locale.ROOT).startsWith("java ")) {
+                        if(loaderNames.length() != 0) loaderNames.append(", ");
+                        loaderNames.append(gameVersion);
+                    }
                     continue;
                 }
-                mcVersionNames[i] = gameVersion;
-                break;
+                if(mcVersionNames[i] == null) mcVersionNames[i] = gameVersion;
             }
+            loaders[i] = loaderNames.length() == 0 ? null : loaderNames.toString();
 
             hashes[i] = getSha1FromModData(modDetail);
         }
-        return new ModDetail(item, versionNames, versionIds, mcVersionNames, versionUrls, hashes, dependencies);
+        ModDetail detail = new ModDetail(item, versionNames, versionIds, mcVersionNames, versionUrls, hashes, dependencies);
+        detail.versionFileNames = fileNames;
+        detail.versionLoaders = loaders;
+        return detail;
+    }
+
+    private static int getClassId(int contentType) {
+        switch (contentType) {
+            case Constants.CONTENT_MOD:
+                return CURSEFORGE_MOD_CLASS_ID;
+            case Constants.CONTENT_SHADER:
+                return CURSEFORGE_SHADER_CLASS_ID;
+            case Constants.CONTENT_RESOURCEPACK:
+                return CURSEFORGE_RESOURCEPACK_CLASS_ID;
+            default:
+                return CURSEFORGE_MODPACK_CLASS_ID;
+        }
     }
 
     private void fillInMissingModItemData(ModItem item) {
@@ -171,7 +212,7 @@ public class CurseforgeApi implements ModpackApi{
 
     @Override
     public ModLoader installMod(ModDetail modDetail, int selectedVersion) throws IOException{
-        //TODO considering only modpacks for now
+        // Only modpacks reach this point, single-file content is handled by ContentInstaller
         return ModpackInstaller.installModpack(modDetail, selectedVersion, this::installCurseforgeZip);
     }
 

@@ -10,8 +10,13 @@ public class ModItem extends ModSource {
     public String imageUrl;
 
     public ModItem(int apiSource, boolean isModpack, String id, String title, String description, String imageUrl) {
+        this(apiSource, isModpack ? Constants.CONTENT_MODPACK : Constants.CONTENT_MOD, id, title, description, imageUrl);
+    }
+
+    public ModItem(int apiSource, int contentType, String id, String title, String description, String imageUrl) {
         this.apiSource = apiSource;
-        this.isModpack = isModpack;
+        this.contentType = contentType;
+        this.isModpack = contentType == Constants.CONTENT_MODPACK;
         this.id = id;
         this.title = title;
         this.description = description;
@@ -27,7 +32,7 @@ public class ModItem extends ModSource {
                 ", description='" + description + '\'' +
                 ", imageUrl='" + imageUrl + '\'' +
                 ", apiSource=" + apiSource +
-                ", isModpack=" + isModpack +
+                ", contentType=" + contentType +
                 '}';
     }
 

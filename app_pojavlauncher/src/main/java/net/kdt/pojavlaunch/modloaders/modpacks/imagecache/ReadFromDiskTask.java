@@ -43,6 +43,8 @@ public class ReadFromDiskTask implements Runnable {
                 return;
             }
         }
+        // Some projects (mostly shaders and resource packs) have no icon at all
+        if(imageUrl == null) return;
         if(iconCache.cachePath.canWrite() &&
                 !taskCancelled()) { // don't run the download task if the task got canceled
             runDownloadTask();

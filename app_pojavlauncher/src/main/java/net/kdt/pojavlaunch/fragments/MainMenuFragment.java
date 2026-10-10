@@ -29,6 +29,7 @@ import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
 import net.kdt.pojavlaunch.modloaders.LWJGL3ifyUtils;
+import net.kdt.pojavlaunch.modloaders.modpacks.models.Constants;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
 import net.kdt.pojavlaunch.value.launcherprofiles.LauncherProfiles;
@@ -54,6 +55,7 @@ public class MainMenuFragment extends Fragment {
         Button mInstallJarButton = view.findViewById(R.id.install_jar_button);
         Button mShareLogsButton = view.findViewById(R.id.share_logs_button);
         Button mOpenDirectoryButton = view.findViewById(R.id.open_files_button);
+        Button mDownloadContentButton = view.findViewById(R.id.download_content_button);
 
         ImageButton mEditProfileButton = view.findViewById(R.id.edit_profile_button);
         Button mPlayButton = view.findViewById(R.id.play_button);
@@ -86,6 +88,16 @@ public class MainMenuFragment extends Fragment {
         });
 
         mShareLogsButton.setOnClickListener((v) -> shareLog(requireContext()));
+
+        mDownloadContentButton.setOnClickListener(v -> {
+            if (!hasOnlineProfile()) {
+                hasNoOnlineProfileDialog(requireActivity());
+                return;
+            }
+            Bundle arguments = new Bundle();
+            arguments.putInt(SearchModFragment.ARG_CONTENT_TYPE, Constants.CONTENT_MOD);
+            Tools.swapFragment(requireActivity(), SearchModFragment.class, SearchModFragment.TAG, arguments);
+        });
 
         mOpenDirectoryButton.setOnClickListener((v)-> {
             if (Tools.isDemoProfile(v.getContext())){ // Say a different message when on demo profile since they might see the hidden demo folder
