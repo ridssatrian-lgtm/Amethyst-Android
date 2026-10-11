@@ -3,6 +3,8 @@ package net.kdt.pojavlaunch.modloaders.modpacks.api;
 import android.app.Activity;
 import android.net.Uri;
 
+import androidx.annotation.Nullable;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -26,6 +28,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.zip.ZipFile;
 
@@ -90,66 +93,34 @@ public class ModrinthApi implements ModpackApi{
 
     @Override
     public ModDetail getModDetails(ModItem item) {
+        return getModDetails(item, null, null);
+    }
+
+    @Override
+    public ModDetail getModDetails(ModItem item, @Nullable String mcVersion, @Nullable String loader) {
         fillInMissingModItemData(item);
-        JsonArray response = mApiHandler.get(String.format("project/%s/version", item.id), JsonArray.class);
+
+        // Ask Modrinth to leave out files for other versions/loaders: popular mods have hundreds of them
+        HashMap<String, Object> params = new HashMap<>();
+        if (mcVersion != null) params.put("game_versions", toJsonStringArray(mcVersion));
+        String[] acceptedLoaders = VersionMatcher.getAcceptedLoaders(loader, mcVersion);
+        if (acceptedLoaders != null) params.put("loaders", toJsonStringArray(acceptedLoaders));
+        String endpoint = String.format("project/%s/version", item.id);
+        JsonArray response = params.isEmpty() ?
+                mApiHandler.get(endpoint, JsonArray.class) :
+                mApiHandler.get(endpoint, params, JsonArray.class);
         if(response == null) return null;
-        System.out.println(response);
-        String[] names = new String[response.size()];
-        String[] ids = new String[response.size()];
-        String[] mcNames = new String[response.size()];
-        String[] urls = new String[response.size()];
-        String[] hashes = new String[response.size()];
-        String[] fileNames = new String[response.size()];
-        String[] loaders = new String[response.size()];
-        ModDetail.Dependencies[][] dependencies = new ModDetail.Dependencies[response.size()][];
 
-        for (int i=0; i<response.size(); ++i) {
-            JsonObject version = response.get(i).getAsJsonObject();
-            names[i] = version.get("name").getAsString();
-            ids[i] = version.get("id").getAsString();
-            try {
-                JsonArray dependenciesJsonArray = version.getAsJsonArray("dependencies");
-                dependencies[i] = new ModDetail.Dependencies[dependenciesJsonArray.size()];
-                for (int i1 = 0; i1 < dependenciesJsonArray.size(); ++i1) {
-                    JsonObject obj = dependenciesJsonArray.get(i1).getAsJsonObject();
-                    dependencies[i][i1] = new ModDetail.Dependencies(
-                            GsonJsonUtils.getStringSafe(obj, "project_id"),
-                            GsonJsonUtils.getStringSafe(obj, "version_id"),
-                            GsonJsonUtils.getStringSafe(obj, "file_name"),
-                            GsonJsonUtils.getStringSafe(obj, "dependency_type")
-                    );
-                }
-            } catch (Exception ignored) {}
+        return ModrinthVersionParser.parse(item, response);
+    }
 
-            mcNames[i] = version.get("game_versions").getAsJsonArray().get(0).getAsString();
-            loaders[i] = joinJsonStrings(version.getAsJsonArray("loaders"));
-            // Prefer the file marked as primary, otherwise use the first one
-            JsonArray files = version.getAsJsonArray("files");
-            JsonObject file = files.get(0).getAsJsonObject();
-            for (int f = 0; f < files.size(); ++f) {
-                JsonObject candidate = files.get(f).getAsJsonObject();
-                JsonElement primary = candidate.get("primary");
-                if (primary != null && !primary.isJsonNull() && primary.getAsBoolean()) {
-                    file = candidate;
-                    break;
-                }
-            }
-            urls[i] = file.get("url").getAsString();
-            fileNames[i] = GsonJsonUtils.getStringSafe(file, "filename");
-            // Assume there may not be hashes, in case the API changes
-            JsonObject hashesMap = file.getAsJsonObject("hashes");
-            if(hashesMap == null || hashesMap.get("sha1") == null){
-                hashes[i] = null;
-                continue;
-            }
-
-            hashes[i] = hashesMap.get("sha1").getAsString();
+    private static String toJsonStringArray(String... values) {
+        StringBuilder builder = new StringBuilder("[");
+        for (int i = 0; i < values.length; i++) {
+            if (i != 0) builder.append(',');
+            builder.append('"').append(values[i].replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
         }
-
-        ModDetail modDetail = new ModDetail(item, names, ids, mcNames, urls, hashes, dependencies);
-        modDetail.versionFileNames = fileNames;
-        modDetail.versionLoaders = loaders;
-        return modDetail;
+        return builder.append(']').toString();
     }
 
     private static String getProjectType(int contentType) {
@@ -163,16 +134,6 @@ public class ModrinthApi implements ModpackApi{
             default:
                 return "modpack";
         }
-    }
-
-    private static String joinJsonStrings(JsonArray array) {
-        if (array == null || array.size() == 0) return null;
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < array.size(); ++i) {
-            if (i != 0) builder.append(", ");
-            builder.append(array.get(i).getAsString());
-        }
-        return builder.toString();
     }
 
     private void fillInMissingModItemData(ModItem item) {

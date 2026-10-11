@@ -527,8 +527,29 @@
     <string name="search_content_no_result">Nothing found</string>
     <string name="search_content_error">Failed to search. Check your internet connection.</string>
     <string name="content_target_profile">Files will be saved to profile: %s</string>
-    <string name="content_download_downloading">Downloading file (%.2f MB / %.2f MB)</string>
+    <string name="content_download_downloading">Downloading %s (%.2f MB / %.2f MB)</string>
     <string name="content_install_done">%1$s saved to the %2$s folder</string>
     <string name="content_install_failed">Failed to download the file</string>
+    <string name="content_note_compatible">Files for %s</string>
+    <string name="content_note_none">No file fits %s</string>
+    <string name="content_note_vanilla">%s has no mod loader. Mods will not load until you use a Fabric, Quilt, Forge or NeoForge profile.</string>
+    <string name="content_tag_beta">beta</string>
+    <string name="content_tag_alpha">alpha</string>
+    <string name="content_duplicate_title">Mod already installed</string>
+    <string name="content_duplicate_message">%1$s (version %2$s) is already in this profile. The new file is %3$s (version %4$s).\n\nThe old file is not deleted: it is renamed to .disabled and you can rename it back.</string>
+    <string name="content_duplicate_replace">Replace</string>
+    <string name="content_duplicate_keep_both">Keep both</string>
+    <string name="content_summary_title">Download finished</string>
+    <string name="content_summary_installed">Saved to %2$s: %1$s</string>
+    <string name="content_summary_dependencies">Also installed (required by the mod): %1$s</string>
+    <string name="content_summary_replaced">Set aside as .disabled: %1$s</string>
+    <string name="content_summary_skipped">Already installed, not downloaded again: %1$s</string>
+    <string name="content_summary_cancelled">Cancelled.</string>
+    <string name="content_warn_no_link">%s cannot be downloaded: the author disabled downloads from other launchers. Install it by hand.</string>
+    <string name="content_warn_same_name">%s has the same file name as the old one, so the old one was set aside.</string>
+    <string name="content_warn_load_failed">Could not look up the required mod %s. The mod may not work.</string>
+    <string name="content_warn_no_compatible">The required mod %1$s has no file for %2$s. The mod may not work.</string>
+    <string name="content_warn_external">The required file %s must be installed by hand.</string>
+    <string name="content_warn_too_many">Stopped after %s files, the mod needs too many others.</string>
 
 </resources>

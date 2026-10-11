@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.kdt.pojavlaunch.PojavApplication;
 import net.kdt.pojavlaunch.R;
@@ -118,6 +119,11 @@ public class CommonApi implements ModpackApi {
     public ModDetail getModDetails(ModItem item) {
         Log.i("CommonApi", "Invoking getModDetails on item.apiSource="+item.apiSource +" item.title="+item.title);
         return getModpackApi(item.apiSource).getModDetails(item);
+    }
+
+    @Override
+    public ModDetail getModDetails(ModItem item, @Nullable String mcVersion, @Nullable String loader) {
+        return getModpackApi(item.apiSource).getModDetails(item, mcVersion, loader);
     }
 
     @Override

@@ -18,6 +18,18 @@ public class ModDetail extends ModItem {
     public String[] versionFileNames;
     /* Mod loaders each version supports (e.g. "fabric, quilt"), shown for mods. May be null or contain nulls. */
     public String[] versionLoaders;
+    /* Every Minecraft version each file works with, used to match files with a profile. Entries may be null if unknown. */
+    public String[][] versionGameVersions;
+    /* Every loader (lowercase: fabric, quilt, forge, neoforge) each file works with. Entries may be null or empty if unknown. */
+    public String[][] versionLoaderNames;
+    /* Release channel of each file, see the CHANNEL_* constants */
+    public int[] versionChannels;
+    /* ISO 8601 publish date of each file, used to find the newest one. Entries may be null. */
+    public String[] versionDates;
+
+    public static final int CHANNEL_RELEASE = 0;
+    public static final int CHANNEL_BETA = 1;
+    public static final int CHANNEL_ALPHA = 2;
     public ModDetail(ModItem item, String[] versionNames, String[] versionIds, String[] mcVersionNames, String[] versionUrls, String[] hashes, Dependencies[][] dependencies) {
         super(item.apiSource, item.contentType, item.id, item.title, item.description, item.imageUrl);
         this.versionNames = versionNames;
@@ -60,6 +72,14 @@ public class ModDetail extends ModItem {
             this.version_id = version_id;
             this.file_name = file_name;
             this.dependency_type = dependency_type;
+        }
+
+        /**
+         * @return whether the mod does not work without this dependency.
+         *         Modrinth says "required", CurseForge uses relation type 3 (RequiredDependency).
+         */
+        public boolean isRequired() {
+            return "required".equals(dependency_type) || "3".equals(dependency_type);
         }
     }
 

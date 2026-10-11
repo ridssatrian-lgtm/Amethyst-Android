@@ -1,8 +1,10 @@
 package net.kdt.pojavlaunch.modloaders.modpacks;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +16,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.RoundedBitmapDrawable;
 import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,7 +26,9 @@ import com.kdt.SimpleArrayAdapter;
 import net.kdt.pojavlaunch.PojavApplication;
 import net.kdt.pojavlaunch.R;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.modloaders.modpacks.api.InstanceInfo;
 import net.kdt.pojavlaunch.modloaders.modpacks.api.ModpackApi;
+import net.kdt.pojavlaunch.modloaders.modpacks.api.VersionMatcher;
 import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.ImageReceiver;
 import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.ModIconCache;
 import net.kdt.pojavlaunch.modloaders.modpacks.models.Constants;
@@ -33,6 +38,7 @@ import net.kdt.pojavlaunch.modloaders.modpacks.models.SearchFilters;
 import net.kdt.pojavlaunch.modloaders.modpacks.models.SearchResult;
 import net.kdt.pojavlaunch.progresskeeper.TaskCountListener;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
@@ -156,6 +162,11 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         private Spinner mExtendedSpinner;
         private Button mExtendedButton;
         private TextView mExtendedErrorTextView;
+        private TextView mExtendedNoteTextView;
+        /* What the selected profile runs, only looked up for single-file content. Null if unknown. */
+        private InstanceInfo mInstance;
+        /* Maps a position in the version spinner to the index of the file in mModDetail */
+        private int[] mVersionIndexMap;
         private Future<?> mExtensionFuture;
         private Bitmap mThumbnailBitmap;
         private ImageReceiver mImageReceiver;
@@ -174,11 +185,18 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     mExtendedButton = mExtendedLayout.findViewById(R.id.mod_extended_select_version_button);
                     mExtendedSpinner = mExtendedLayout.findViewById(R.id.mod_extended_version_spinner);
                     mExtendedErrorTextView = mExtendedLayout.findViewById(R.id.mod_extended_error_textview);
+                    mExtendedNoteTextView = mExtendedLayout.findViewById(R.id.mod_extended_note_textview);
 
-                    mExtendedButton.setOnClickListener(v1 -> mModpackApi.handleInstallation(
-                            mExtendedButton.getContext().getApplicationContext(),
-                            mModDetail,
-                            mExtendedSpinner.getSelectedItemPosition()));
+                    mExtendedButton.setOnClickListener(v1 -> {
+                        int position = mExtendedSpinner.getSelectedItemPosition();
+                        if(mModDetail == null || mVersionIndexMap == null
+                                || position < 0 || position >= mVersionIndexMap.length) return;
+                        Context buttonContext = mExtendedButton.getContext();
+                        // Single files may need to ask the user something, which needs the Activity
+                        Context installContext = mModDetail.contentType == Constants.CONTENT_MODPACK ?
+                                buttonContext.getApplicationContext() : buttonContext;
+                        mModpackApi.handleInstallation(installContext, mModDetail, mVersionIndexMap[position]);
+                    });
                     mExtendedSpinner.setAdapter(mLoadingAdapter);
                 } else {
                     if(isExtended()) closeDetailedView();
@@ -198,7 +216,15 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                          * If we didn't use a Future, we would have extended a ViewHolder with completely unrelated content
                          * or with an error that has never actually happened
                          */
-                        mModDetail = mModpackApi.getModDetails(mModItem);
+                        // For mods the profile decides which files make sense, for shaders and
+                        // resource packs it only picks the file that is shown first
+                        InstanceInfo instance = mModItem.contentType == Constants.CONTENT_MODPACK ?
+                                null : InstanceInfo.ofCurrentProfile();
+                        if(instance != null && mModItem.contentType == Constants.CONTENT_MOD) {
+                            mModDetail = mModpackApi.getModDetails(mModItem, instance.minecraftVersion, instance.loader);
+                        } else {
+                            mModDetail = mModpackApi.getModDetails(mModItem);
+                        }
                         System.out.println(mModDetail);
                         Tools.runOnUiThread(() -> {
                             /*
@@ -215,6 +241,7 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                              * let's help GC clean it up once we exit!
                              */
                             mExtensionFuture = null;
+                            mInstance = instance;
                             setStateDetailed(mModDetail);
                         });
                     }).startOnExecutor(PojavApplication.sExecutorService);
@@ -231,6 +258,8 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         /** Display basic info about the moditem */
         public void setStateLimited(ModItem item) {
             mModDetail = null;
+            mInstance = null;
+            mVersionIndexMap = null;
             if(mThumbnailBitmap != null) {
                 mIconView.setImageBitmap(null);
                 mThumbnailBitmap.recycle();
@@ -269,29 +298,91 @@ public class ModItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         /** Display extended info/interaction about a modpack */
         private void setStateDetailed(ModDetail detailedItem) {
             if(detailedItem != null) {
-                setInstallEnabled(true);
+                int preselected = buildVersionList(detailedItem);
+                setInstallEnabled(mVersionIndexMap.length > 0);
                 mExtendedErrorTextView.setVisibility(View.GONE);
-                mVersionAdapter.setObjects(Arrays.asList(getVersionLabels(detailedItem)));
+                String[] labels = new String[mVersionIndexMap.length];
+                for(int i = 0; i < labels.length; i++) labels[i] = getVersionLabel(detailedItem, mVersionIndexMap[i]);
+                mVersionAdapter.setObjects(Arrays.asList(labels));
                 mExtendedSpinner.setAdapter(mVersionAdapter);
+                if(labels.length > 0) mExtendedSpinner.setSelection(preselected);
+                updateNote(detailedItem);
             } else {
                 closeDetailedView();
+                mVersionIndexMap = null;
                 setInstallEnabled(false);
                 mExtendedErrorTextView.setVisibility(View.VISIBLE);
+                mExtendedNoteTextView.setVisibility(View.GONE);
                 mExtendedSpinner.setAdapter(null);
                 mVersionAdapter.setObjects(null);
             }
         }
 
-        /** Mods need to show which loaders a file is for, otherwise Fabric and Forge files look the same */
-        private String[] getVersionLabels(ModDetail detail) {
-            String[] names = detail.versionNames;
-            if(detail.contentType != Constants.CONTENT_MOD || detail.versionLoaders == null) return names;
-            String[] labels = new String[names.length];
-            for(int i = 0; i < names.length; i++) {
-                String loaders = i < detail.versionLoaders.length ? detail.versionLoaders[i] : null;
-                labels[i] = loaders == null ? names[i] : names[i] + " [" + loaders + "]";
+        /**
+         * Decide which files are offered and which one is selected at first.
+         * Mods are narrowed down to the files that run on the profile; everything else is listed as is.
+         * @return the spinner position to select
+         */
+        private int buildVersionList(ModDetail detail) {
+            int count = detail.versionNames.length;
+            boolean isMod = detail.contentType == Constants.CONTENT_MOD;
+            boolean isPack = detail.contentType == Constants.CONTENT_MODPACK;
+            String mcVersion = mInstance == null ? null : mInstance.minecraftVersion;
+            String loader = mInstance == null || !isMod ? null : mInstance.loader;
+
+            ArrayList<Integer> offered = new ArrayList<>(count);
+            for(int i = 0; i < count; i++) {
+                if(!isMod || mInstance == null || VersionMatcher.isCompatible(detail, i, mcVersion, loader)) {
+                    offered.add(i);
+                }
             }
-            return labels;
+            mVersionIndexMap = new int[offered.size()];
+            for(int i = 0; i < mVersionIndexMap.length; i++) mVersionIndexMap[i] = offered.get(i);
+            if(isPack || mInstance == null) return 0;
+
+            // Select the newest release that fits, instead of whatever the source lists first
+            int best = VersionMatcher.findBestVersion(detail, mcVersion, loader);
+            for(int i = 0; i < mVersionIndexMap.length; i++) {
+                if(mVersionIndexMap[i] == best) return i;
+            }
+            return 0;
+        }
+
+        private String getVersionLabel(ModDetail detail, int index) {
+            StringBuilder label = new StringBuilder(detail.versionNames[index]);
+            // Mods need to show which loaders a file is for, otherwise Fabric and Forge files look the same
+            if(detail.contentType == Constants.CONTENT_MOD && detail.versionLoaders != null
+                    && index < detail.versionLoaders.length && detail.versionLoaders[index] != null) {
+                label.append(" [").append(detail.versionLoaders[index]).append(']');
+            }
+            if(detail.versionChannels != null && index < detail.versionChannels.length) {
+                if(detail.versionChannels[index] == ModDetail.CHANNEL_BETA) {
+                    label.append(" (").append(mExtendedLayout.getResources().getString(R.string.content_tag_beta)).append(')');
+                } else if(detail.versionChannels[index] == ModDetail.CHANNEL_ALPHA) {
+                    label.append(" (").append(mExtendedLayout.getResources().getString(R.string.content_tag_alpha)).append(')');
+                }
+            }
+            return label.toString();
+        }
+
+        /** Say which profile the list was made for, or why nothing is listed */
+        private void updateNote(ModDetail detail) {
+            if(mInstance == null || detail.contentType != Constants.CONTENT_MOD) {
+                mExtendedNoteTextView.setVisibility(View.GONE);
+                return;
+            }
+            String description = mInstance.describe();
+            if(description.isEmpty()) {
+                mExtendedNoteTextView.setVisibility(View.GONE);
+                return;
+            }
+            Context context = mExtendedNoteTextView.getContext();
+            boolean noFile = mVersionIndexMap.length == 0;
+            boolean noLoader = mInstance.loader == null;
+            int textId = noFile ? R.string.content_note_none : noLoader ? R.string.content_note_vanilla : R.string.content_note_compatible;
+            mExtendedNoteTextView.setText(context.getString(textId, description));
+            mExtendedNoteTextView.setTextColor(noFile || noLoader ? Color.RED : ContextCompat.getColor(context, R.color.secondary_text));
+            mExtendedNoteTextView.setVisibility(View.VISIBLE);
         }
 
         private void openDetailedView() {

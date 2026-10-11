@@ -15,13 +15,23 @@
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Tells which Minecraft version and loader the listed files were picked for -->
+    <TextView
+        android:id="@+id/mod_extended_note_textview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/secondary_text"
+        android:textSize="@dimen/_10ssp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/mod_extended_error_textview" />
+
     <androidx.appcompat.widget.AppCompatSpinner
         android:id="@+id/mod_extended_version_spinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="@dimen/_30sdp"
         android:layout_marginVertical="@dimen/padding_moderate"
-        app:layout_constraintTop_toBottomOf="@+id/mod_extended_error_textview"
+        app:layout_constraintTop_toBottomOf="@+id/mod_extended_note_textview"
         />
 
     <com.kdt.mcgui.MineButton

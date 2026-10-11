@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
 
+import androidx.annotation.Nullable;
+
 import com.kdt.mcgui.ProgressLayout;
 
 import net.kdt.pojavlaunch.PojavApplication;
@@ -49,6 +51,15 @@ public interface ModpackApi {
     ModDetail getModDetails(ModItem item);
 
     /**
+     * Same as getModDetails(item), but the source may leave out files that cannot work with the given
+     * Minecraft version / loader to save bandwidth. Either filter may be null for "any".
+     * Callers must not rely on the filtering, it is only a hint: check with VersionMatcher.
+     */
+    default ModDetail getModDetails(ModItem item, @Nullable String mcVersion, @Nullable String loader) {
+        return getModDetails(item);
+    }
+
+    /**
      * Download and install the mod(pack)
      * @param modDetail The mod detail data
      * @param selectedVersion The selected version
@@ -60,7 +71,7 @@ public interface ModpackApi {
         PojavApplication.sExecutorService.execute(() -> {
             // Mods, shaders and resource packs are single files that go into the current profile
             if (modDetail.contentType != Constants.CONTENT_MODPACK) {
-                ContentInstaller.install(context, modDetail, selectedVersion);
+                ContentInstaller.install(context, this, modDetail, selectedVersion);
                 return;
             }
             try {

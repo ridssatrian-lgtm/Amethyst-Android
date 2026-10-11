@@ -432,8 +432,29 @@
     <string name="search_content_no_result">Tidak ditemukan</string>
     <string name="search_content_error">Gagal mencari. Periksa koneksi internetmu.</string>
     <string name="content_target_profile">File akan disimpan ke profil: %s</string>
-    <string name="content_download_downloading">Mengunduh file (%.2f MB / %.2f MB)</string>
+    <string name="content_download_downloading">Mengunduh %s (%.2f MB / %.2f MB)</string>
     <string name="content_install_done">%1$s disimpan ke folder %2$s</string>
     <string name="content_install_failed">Gagal mengunduh file</string>
+    <string name="content_note_compatible">File untuk %s</string>
+    <string name="content_note_none">Tidak ada file yang cocok dengan %s</string>
+    <string name="content_note_vanilla">%s tidak memakai mod loader. Mod tidak akan jalan sampai kamu memakai profil Fabric, Quilt, Forge, atau NeoForge.</string>
+    <string name="content_tag_beta">beta</string>
+    <string name="content_tag_alpha">alpha</string>
+    <string name="content_duplicate_title">Mod sudah terpasang</string>
+    <string name="content_duplicate_message">%1$s (versi %2$s) sudah ada di profil ini. File barunya %3$s (versi %4$s).\n\nFile lama tidak dihapus: namanya diubah jadi .disabled dan bisa kamu kembalikan.</string>
+    <string name="content_duplicate_replace">Ganti</string>
+    <string name="content_duplicate_keep_both">Simpan keduanya</string>
+    <string name="content_summary_title">Unduhan selesai</string>
+    <string name="content_summary_installed">Disimpan ke %2$s: %1$s</string>
+    <string name="content_summary_dependencies">Ikut terpasang (dibutuhkan mod): %1$s</string>
+    <string name="content_summary_replaced">Disisihkan jadi .disabled: %1$s</string>
+    <string name="content_summary_skipped">Sudah terpasang, tidak diunduh lagi: %1$s</string>
+    <string name="content_summary_cancelled">Dibatalkan.</string>
+    <string name="content_warn_no_link">%s tidak bisa diunduh: pembuatnya melarang unduhan dari launcher lain. Pasang manual.</string>
+    <string name="content_warn_same_name">%s bernama sama dengan file lama, jadi file lama disisihkan.</string>
+    <string name="content_warn_load_failed">Gagal mencari mod yang dibutuhkan: %s. Mod mungkin tidak jalan.</string>
+    <string name="content_warn_no_compatible">Mod yang dibutuhkan, %1$s, tidak punya file untuk %2$s. Mod mungkin tidak jalan.</string>
+    <string name="content_warn_external">File yang dibutuhkan, %s, harus dipasang manual.</string>
+    <string name="content_warn_too_many">Berhenti setelah %s file, mod ini butuh terlalu banyak mod lain.</string>
 
 </resources>
