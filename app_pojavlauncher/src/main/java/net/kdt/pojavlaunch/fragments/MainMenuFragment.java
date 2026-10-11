@@ -89,11 +89,8 @@ public class MainMenuFragment extends Fragment {
 
         mShareLogsButton.setOnClickListener((v) -> shareLog(requireContext()));
 
+        // Mods, shaders and resource packs are public downloads: no account is needed to get them
         mDownloadContentButton.setOnClickListener(v -> {
-            if (!hasOnlineProfile()) {
-                hasNoOnlineProfileDialog(requireActivity());
-                return;
-            }
             Bundle arguments = new Bundle();
             arguments.putInt(SearchModFragment.ARG_CONTENT_TYPE, Constants.CONTENT_MOD);
             Tools.swapFragment(requireActivity(), SearchModFragment.class, SearchModFragment.TAG, arguments);
@@ -102,8 +99,6 @@ public class MainMenuFragment extends Fragment {
         mOpenDirectoryButton.setOnClickListener((v)-> {
             if (Tools.isDemoProfile(v.getContext())){ // Say a different message when on demo profile since they might see the hidden demo folder
                 hasNoOnlineProfileDialog(getActivity(), getString(R.string.demo_unsupported), getString(R.string.change_account));
-            } else if (!hasOnlineProfile()) { // Otherwise display the generic pop-up to log in
-                hasNoOnlineProfileDialog(requireActivity());
             } else openPath(v.getContext(), getCurrentProfileDirectory(), false);
 
         });

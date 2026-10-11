@@ -1,8 +1,5 @@
 package net.kdt.pojavlaunch.fragments;
 
-import static net.kdt.pojavlaunch.Tools.hasNoOnlineProfileDialog;
-import static net.kdt.pojavlaunch.Tools.hasOnlineProfile;
-
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
@@ -46,11 +43,8 @@ public class ModpackCreateFragment extends Fragment {
         });;
     }
 
+    /** Browsing and downloading modpacks does not need an account: they are public downloads */
     private void tryInstall(Class<? extends Fragment> fragmentClass, String tag){
-        if(!hasOnlineProfile()){
-            hasNoOnlineProfileDialog(requireActivity());
-        } else {
-            Tools.swapFragment(requireActivity(), fragmentClass, tag, null);
-        }
+        Tools.swapFragment(requireActivity(), fragmentClass, tag, null);
     }
 }
